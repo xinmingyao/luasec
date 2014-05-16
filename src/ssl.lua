@@ -115,6 +115,23 @@ end
 --
 --
 --
+function wrap_nonblock(fd,cfg)
+   local ctx, msg
+   if type(cfg) == "table" then
+      ctx, msg = newcontext(cfg)
+      if not ctx then return nil, msg end
+   else
+      ctx = cfg
+   end
+   local s, msg = core.create(ctx)
+   if s then
+      core.setfd(s,fd)
+      registry[s] = ctx
+      return s
+   end
+   return nil, msg 
+end
+
 function wrap(sock, cfg)
    local ctx, msg
    if type(cfg) == "table" then

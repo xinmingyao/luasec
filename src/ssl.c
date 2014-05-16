@@ -280,6 +280,56 @@ static int meth_create(lua_State *L)
 }
 
 /**
+ * Create a new TLS/SSL object and mark it as new.
+ * for nonblock socket
+ */
+static int meth_create_nonblock(lua_State *L)
+{
+  p_ssl ssl;
+  int mode = lsec_getmode(L, 1);
+  SSL_CTX *ctx = lsec_checkcontext(L, 1);
+
+  if (mode == LSEC_MODE_INVALID) {
+    lua_pushnil(L);
+    lua_pushstring(L, "invalid mode");
+    return 2;
+  }
+  ssl = (p_ssl)lua_newuserdata(L, sizeof(t_ssl));
+  if (!ssl) {
+    lua_pushnil(L);
+    lua_pushstring(L, "error creating SSL object");
+    return 2;
+  }
+  ssl->ssl = SSL_new(ctx);
+  if (!ssl->ssl) {
+    lua_pushnil(L);
+    lua_pushfstring(L, "error creating SSL object (%s)",
+      ERR_reason_error_string(ERR_get_error()));
+    return 2;
+  }
+  ssl->state = LSEC_STATE_NEW;
+  SSL_set_fd(ssl->ssl, (int)SOCKET_INVALID);
+  SSL_set_mode(ssl->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE | 
+    SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+#if defined(SSL_MODE_RELEASE_BUFFERS)
+  SSL_set_mode(ssl->ssl, SSL_MODE_RELEASE_BUFFERS);
+#endif
+  if (mode == LSEC_MODE_SERVER)
+    SSL_set_accept_state(ssl->ssl);
+  else
+    SSL_set_connect_state(ssl->ssl);
+  /*
+  io_init(&ssl->io, (p_send)ssl_send, (p_recv)ssl_recv, 
+    (p_error) ssl_ioerror, ssl);
+  timeout_init(&ssl->tm, -1, -1);
+  buffer_init(&ssl->buf, &ssl->io, &ssl->tm);
+  */
+  luaL_getmetatable(L, "SSL:Connection");
+  lua_setmetatable(L, -2);
+  return 1;
+}
+
+/**
  * Buffer send function
  */
 static int meth_send(lua_State *L) {
@@ -335,6 +385,22 @@ static int meth_setfd(lua_State *L)
   SSL_set_fd(ssl->ssl, (int)ssl->sock);
   return 0;
 }
+
+
+
+/**
+ * nod block handsahke,yield in lua,when handshake not complete
+ */
+
+static int meth_handshake_nonblock(lua_State *L)
+{
+  p_ssl ssl = (p_ssl)luaL_checkudata(L, 1, "SSL:Connection");
+  int err;
+  err = SSL_do_handshake(ssl->ssl);
+  lua_pushnumber(L,SSL_get_error(ssl->ssl, err));
+  return 1;
+}
+
 
 /**
  * Lua handshake function.
@@ -746,6 +812,7 @@ static luaL_Reg methods[] = {
   {"setstats",            meth_setstats},
   {"dirty",               meth_dirty},
   {"dohandshake",         meth_handshake},
+  {"dohandshake_nonblock",         meth_handshake_nonblock},
   {"receive",             meth_receive},
   {"send",                meth_send},
   {"settimeout",          meth_settimeout},
@@ -769,6 +836,7 @@ static luaL_Reg meta[] = {
 static luaL_Reg funcs[] = {
   {"compression", meth_compression},
   {"create",      meth_create},
+  {"create_nonblock",      meth_create_nonblock},
   {"info",        meth_info},
   {"setfd",       meth_setfd},
   {"setmethod",   meth_setmethod},
