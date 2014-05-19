@@ -324,7 +324,7 @@ static int create(lua_State *L)
   SSL_CTX_set_session_cache_mode(ctx->context, SSL_SESS_CACHE_OFF);
   /* Link LuaSec context with the OpenSSL context */
   SSL_CTX_set_app_data(ctx->context, ctx);
-
+  SSL_CTX_set_read_ahead(ctx->context,1);
   return 1;
 }
 
