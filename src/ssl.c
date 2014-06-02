@@ -31,6 +31,12 @@
 #include "context.h"
 #include "ssl.h"
 
+
+#define SRTP_MAX_KEY_LEN 30
+#define SRTP_MASTER_KEY_BASE64_LEN  (SRTP_MASTER_KEY_LEN * 4 / 3)
+#define SRTP_MASTER_KEY_KEY_LEN  16
+#define SRTP_MASTER_KEY_SALT_LEN  14
+#define SRTP_MASTER_KEY_LEN 30
 /**
  * Underline socket error.
  */
@@ -279,6 +285,56 @@ static int meth_create(lua_State *L)
   return 1;
 }
 
+
+static int meth_dtls_session_keys(lua_State *L)
+{
+  p_ssl ssl = (p_ssl)luaL_checkudata(L, 1, "SSL:Connection");
+  unsigned char material[SRTP_MASTER_KEY_LEN << 1];
+  if (!SSL_export_keying_material(
+				  ssl->ssl,
+				  material,
+				  sizeof(material),
+				  "EXTRACTOR-dtls_srtp", 19, NULL, 0, 0))
+    {
+      lua_pushstring(L, "unable get SSL dtls key!");
+      lua_error(L);
+    }
+  /**
+     client key
+     master key
+     client salt
+     server salt
+   **/
+  char client_master_key[SRTP_MASTER_KEY_LEN + 1] ;
+  char server_master_key[SRTP_MASTER_KEY_LEN + 1] ;
+  /*
+  // char client_master_salt[SRTP_MASTER_KEY_SALT_LEN + 1] ;
+  //char server_master_salt[SRTP_MASTER_KEY_SALT_LEN + 1] ;
+  */
+  client_master_key[SRTP_MASTER_KEY_LEN]  = '\0';
+  server_master_key[SRTP_MASTER_KEY_LEN] = '\0';
+  /*
+ // char client_master_salt[SRTP_MASTER_KEY_SALT_LEN] = '\0';
+  // char server_master_salt[SRTP_MASTER_KEY_SALT_LEN1] = '\0';
+  */  
+  size_t offset = 0;
+  memcpy(client_master_key,&material[offset],SRTP_MASTER_KEY_KEY_LEN);
+  offset = offset + SRTP_MASTER_KEY_KEY_LEN;
+  memcpy(server_master_key,&material[offset],SRTP_MASTER_KEY_KEY_LEN);
+  offset = offset + SRTP_MASTER_KEY_KEY_LEN;
+  
+  memcpy(client_master_key,&material[offset],SRTP_MASTER_KEY_SALT_LEN);
+  offset = offset + SRTP_MASTER_KEY_SALT_LEN;
+  
+  memcpy(server_master_key,&material[offset],SRTP_MASTER_KEY_SALT_LEN);
+  offset = offset + SRTP_MASTER_KEY_SALT_LEN;
+  
+  lua_pushstring(L,client_master_key);
+  lua_pushstring(L,server_master_key);
+   
+  return 2;
+  	 
+}
 /**
  * Create a new TLS/SSL object and mark it as new.
  * for nonblock socket
@@ -818,6 +874,7 @@ static luaL_Reg methods[] = {
   {"settimeout",          meth_settimeout},
   {"sni",                 meth_sni},
   {"want",                meth_want},
+  {"dtls_session_keys",   meth_dtls_session_keys},
   {NULL,                  NULL}
 };
 
