@@ -18,6 +18,7 @@
 #include <openssl/x509v3.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/err.h>
+#include <openssl/tls1.h>
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -26,6 +27,7 @@
 #include <luasocket/buffer.h>
 #include <luasocket/timeout.h>
 #include <luasocket/socket.h>
+
 
 #include "x509.h"
 #include "context.h"
@@ -305,14 +307,14 @@ static int meth_dtls_session_keys(lua_State *L)
      client salt
      server salt
    **/
-  char client_master_key[SRTP_MASTER_KEY_LEN + 1] ;
-  char server_master_key[SRTP_MASTER_KEY_LEN + 1] ;
+  char * client_master_key = malloc(SRTP_MASTER_KEY_LEN) ;
+  char * server_master_key = malloc(SRTP_MASTER_KEY_LEN) ;
   /*
   // char client_master_salt[SRTP_MASTER_KEY_SALT_LEN + 1] ;
   //char server_master_salt[SRTP_MASTER_KEY_SALT_LEN + 1] ;
   */
-  client_master_key[SRTP_MASTER_KEY_LEN]  = '\0';
-  server_master_key[SRTP_MASTER_KEY_LEN] = '\0';
+  //  client_master_key[SRTP_MASTER_KEY_LEN]  = '\0';
+  //server_master_key[SRTP_MASTER_KEY_LEN] = '\0';
   /*
  // char client_master_salt[SRTP_MASTER_KEY_SALT_LEN] = '\0';
   // char server_master_salt[SRTP_MASTER_KEY_SALT_LEN1] = '\0';
@@ -329,9 +331,10 @@ static int meth_dtls_session_keys(lua_State *L)
   memcpy(server_master_key,&material[offset],SRTP_MASTER_KEY_SALT_LEN);
   offset = offset + SRTP_MASTER_KEY_SALT_LEN;
   
-  lua_pushstring(L,client_master_key);
-  lua_pushstring(L,server_master_key);
+  lua_pushlightuserdata(L,client_master_key);
+  lua_pushlightuserdata(L,server_master_key);
    
+
   return 2;
   	 
 }
