@@ -456,7 +456,11 @@ static int meth_handshake_nonblock(lua_State *L)
   p_ssl ssl = (p_ssl)luaL_checkudata(L, 1, "SSL:Connection");
   int err;
   err = SSL_do_handshake(ssl->ssl);
-  lua_pushnumber(L,SSL_get_error(ssl->ssl, err));
+  int t = SSL_get_error(ssl->ssl, err);
+  if(t == SSL_ERROR_NONE){
+    ssl->state = LSEC_STATE_CONNECTED;
+  }
+  lua_pushnumber(L,t);
   return 1;
 }
 
