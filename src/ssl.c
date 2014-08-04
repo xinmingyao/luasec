@@ -325,10 +325,10 @@ static int meth_dtls_session_keys(lua_State *L)
   memcpy(server_master_key,&material[offset],SRTP_MASTER_KEY_KEY_LEN);
   offset = offset + SRTP_MASTER_KEY_KEY_LEN;
   
-  memcpy(client_master_key,&material[offset],SRTP_MASTER_KEY_SALT_LEN);
+  memcpy(client_master_key+SRTP_MASTER_KEY_KEY_LEN,&material[offset],SRTP_MASTER_KEY_SALT_LEN);
   offset = offset + SRTP_MASTER_KEY_SALT_LEN;
   
-  memcpy(server_master_key,&material[offset],SRTP_MASTER_KEY_SALT_LEN);
+  memcpy(server_master_key+SRTP_MASTER_KEY_KEY_LEN,&material[offset],SRTP_MASTER_KEY_SALT_LEN);
   offset = offset + SRTP_MASTER_KEY_SALT_LEN;
   
   lua_pushlightuserdata(L,client_master_key);
