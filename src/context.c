@@ -325,6 +325,8 @@ static int create(lua_State *L)
   /* Link LuaSec context with the OpenSSL context */
   SSL_CTX_set_app_data(ctx->context, ctx);
   SSL_CTX_set_read_ahead(ctx->context,1);
+  //for srtp
+  SSL_CTX_set_tlsext_use_srtp(ctx->context,"SRTP_AES128_CM_SHA1_80");
   return 1;
 }
 
