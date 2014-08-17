@@ -858,6 +858,13 @@ static int meth_copyright(lua_State *L)
   return 1;
 }
 
+static int meth_get_ssl(lua_State *L)
+{
+  p_ssl ssl = (p_ssl)luaL_checkudata(L, 1, "SSL:Connection");
+  lua_pushlightuserdata(L,ssl->ssl);
+  return 1;
+  
+}
 /*---------------------------------------------------------------------------*/
 
 /**
@@ -882,6 +889,7 @@ static luaL_Reg methods[] = {
   {"sni",                 meth_sni},
   {"want",                meth_want},
   {"dtls_session_keys",   meth_dtls_session_keys},
+  {"get_ssl",   meth_get_ssl},
   {NULL,                  NULL}
 };
 
